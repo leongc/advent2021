@@ -719,3 +719,45 @@ const dayInput = [
 " 7 92 80 69 61",
   ];
 console.log(playBingo(dayInput));
+
+/*
+--- Part Two ---
+On the other hand, it might be wise to try a different strategy: let the giant squid win.
+
+You aren't sure how many bingo boards a giant squid could play at once, so rather than waste time counting its arms, the safe thing to do is to figure out which board will win last and choose that one. That way, no matter which boards it picks, it will win for sure.
+
+In the above example, the second board is the last to win, which happens after 13 is eventually called and its middle column is completely marked. If you were to keep playing until this point, the second board would have a sum of unmarked numbers equal to 148 for a final score of 148 * 13 = 1924.
+
+Figure out which board will win last. Once it wins, what would its final score be?
+*/
+function loseBingo(lines) {
+  var sequence, currentBoard;
+  var boards = [];
+  for (const line of lines) {
+    if (sequence === undefined) {
+      sequence = line.split(',');
+      continue;
+    }
+    if (line.length === 0) {
+      currentBoard = generateBoard();
+      boards.push(currentBoard);
+      continue;
+    }
+    currentBoard.addRow(line);
+  }
+  for (const number of sequence) {
+    if (boards.length > 1) {
+      // reject winners
+      boards = boards.filter(board => !board.mark(number));
+    } else {
+      // keep playing the last board until it wins
+      if (boards.some(board => board.mark(number))) {
+        return boards[0].getScore();
+      }
+    }
+  }
+  console.log("Error: ran out of numbers or boards")
+  return -boards.length; 
+}
+console.assert(loseBingo(testInput) === 1924);
+console.log(loseBingo(dayInput));
