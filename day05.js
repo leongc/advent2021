@@ -59,7 +59,7 @@ To avoid the most dangerous areas, you need to determine the number of points wh
 Consider only horizontal and vertical lines. At how many points do at least two lines overlap?
 */
 function point(x, y) {
-  return [x,y].join();
+  return (1000*x) + y;
 }
 // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm#All_cases
 function plotLine(x0, y0, x1, y1) {
@@ -70,9 +70,13 @@ function plotLine(x0, y0, x1, y1) {
   let err = dx+dy;  /* error value e_xy */
   let result = [];
   while (true) {  /* loop */
+    if (result.length > 1000) {
+      console.log('Mistakes were made', x0, y0, x1, y1, dx, sx, dy, sy, err, result);
+      break;
+    }
     result.push(point(x0, y0));
     if (x0 === x1 && y0 === y1) break;
-    e2 = 2*err;
+    let e2 = 2*err;
     if (e2 >= dy) { /* e_xy+e_x > 0 */
       err += dy;
       x0 += sx;
@@ -608,3 +612,42 @@ const dayInput = [
 "595,393 -> 941,393",
 ];
 console.log(countDanger(dayInput));
+
+/*
+--- Part Two ---
+Unfortunately, considering only horizontal and vertical lines doesn't give you the full picture; you need to also consider diagonal lines.
+
+Because of the limits of the hydrothermal vent mapping system, the lines in your list will only ever be horizontal, vertical, or a diagonal line at exactly 45 degrees. In other words:
+
+An entry like 1,1 -> 3,3 covers points 1,1, 2,2, and 3,3.
+An entry like 9,7 -> 7,9 covers points 9,7, 8,8, and 7,9.
+Considering all lines from the above example would now produce the following diagram:
+
+1.1....11.
+.111...2..
+..2.1.111.
+...1.2.2..
+.112313211
+...1.2....
+..1...1...
+.1.....1..
+1.......1.
+222111....
+You still need to determine the number of points where at least two lines overlap. In the above example, this is still anywhere in the diagram with a 2 or larger - now a total of 12 points.
+
+Consider all of the lines. At how many points do at least two lines overlap?
+*/
+function countAllDanger(lines) {
+  let pointCounts = new Array(1000000).fill(0);
+  let danger = 0;
+  for (const line of lines) {
+    for (const value of plotLine(...getEndPoints(line))) {
+      if (++pointCounts[value] === 2) {
+        danger++;
+      }
+    }
+  }
+  return danger;
+}
+console.assert(countAllDanger(testInput) === 12);
+console.log(countAllDanger(dayInput));
