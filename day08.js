@@ -70,7 +70,7 @@ function getPatternDigits(inputPatterns) {
   }
   return result;
 }
-let tinyPatternDigits = getPatternDigits(parseEntry(tinyInput)[0]);
+const tinyPatternDigits = getPatternDigits(parseEntry(tinyInput)[0]);
 console.assert(tinyPatternDigits[normalize('dab')] === 7, 'three segments was not interpreted as 7');
 /*
 Using this information, you should be able to work out which combination of signal wires corresponds to each of the ten digits. Then, you can decode the four digit output value. Unfortunately, in the above example, all of the digits in the output value (cdfeb fcadb cdfeb cdbaf) use five segments and are more difficult to deduce.
@@ -115,7 +115,7 @@ function easyCount(lines) {
   }
   return count;
 }
-let testEasyCount = easyCount(testInput);
+const testEasyCount = easyCount(testInput);
 console.assert(testEasyCount === 26, 'expected 26, but was ', testEasyCount);
 /*
 In the output values, how many times do digits 1, 4, 7, or 8 appear?
@@ -323,3 +323,158 @@ const dayInput = [
 'befcg edb bgadfc dfaecb cdfegab egda agcdbe ed dcabg debgc | geda aegd gcdafb dcefab',
   ];
 console.log(easyCount(dayInput));
+
+/*
+--- Part Two ---
+Through a little deduction, you should now be able to determine the remaining digits. Consider again the first example above:
+
+acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab |
+cdfeb fcadb cdfeb cdbaf
+After some careful analysis, the mapping between signal wires and segments only make sense in the following configuration:
+
+ dddd
+e    a
+e    a
+ ffff
+g    b
+g    b
+ cccc
+So, the unique signal patterns would correspond to the following digits:
+
+acedgfb: 8
+cdfbe: 5
+gcdfa: 2
+fbcad: 3
+dab: 7
+cefabd: 9
+cdfgeb: 6
+eafb: 4
+cagedb: 0
+ab: 1
+*/
+// @returns the remainder after subtraction or false if impossible
+function subtract(minuend, subtrahend) {
+  let minuendSet = new Set(minuend.split(''));
+  for (const c of subtrahend.split('')) {
+    if (!minuendSet.delete(c)) {
+      return false; // tried to subtract non-existent segment
+    }
+  }
+  return Array.from(minuendSet).sort().join('');
+}
+console.assert(subtract('fade', 'da') === 'ef');
+console.assert(subtract('g', 'i') === false);
+
+// @return object mapping known patterns to values (otherwise undefined)
+function getPatternAllDigits(inputPatterns) {
+  let result = {};
+  let digitPatterns = {};
+  let fives = []; // 2,3,5
+  let sixes = []; // 0,6,9
+  for (const pattern of inputPatterns) {
+    switch (pattern.length) {
+      case 2: result[pattern] = 1; digitPatterns[1] = pattern; break;
+      case 3: result[pattern] = 7; break;
+      case 4: result[pattern] = 4; break;
+      case 5: fives.push(pattern); break;
+      case 6: sixes.push(pattern); break;
+      case 7: result[pattern] = 8; break;
+      default: console.assert(false, 'unexpected pattern length for ', pattern);
+    }
+  }
+  // out of the fives, only the 3 contains both segments from 1
+  let threePattern = fives.find(p => subtract(p, digitPatterns[1]));
+  console.assert(threePattern, 'unable to find threePattern containing ', digitPatterns[1], ' in fives: ', ...fives);
+  result[threePattern] = 3; digitPatterns[3] = threePattern;
+  
+  // out of the sixes, only the 9 contains all the segments from 3 plus the upper-left segment
+  let ninePattern = sixes.find(p => subtract(p, digitPatterns[3]));
+  console.assert(ninePattern, 'unable to find ninePattern containing ', digitPatterns[3], ' in sixes: ', ...sixes);
+  result[ninePattern] = 9; digitPatterns[9] = ninePattern;
+  let upperLeft = subtract(ninePattern, digitPatterns[3]);
+  
+  // out of the fives, only the 5 contains the upper-left segment
+  let fivePattern = fives.find(p => subtract(p, upperLeft));
+  console.assert(fivePattern, 'unable to find fivePattern containing ', upperLeft, ' in fives: ', ...fives);
+  result[fivePattern] = 5; digitPatterns[5] = fivePattern;
+  
+  // out of the fives, the 2 is neither 3 nor 5
+  let twoPattern = fives.find(p => p !== threePattern && p !== fivePattern);
+  console.assert(twoPattern, 'unable to find twoPattern that is neither: ', threePattern, ' nor ', fivePattern, ' in fives: ', ...fives);
+  result[twoPattern] = 2; digitPatterns[2] = twoPattern;
+  
+  // out of the sixes, the 6 is not 9 and contains all the segments from 5
+  let sixPattern = sixes.find(p => p !== ninePattern && subtract(p, fivePattern));
+  console.assert(sixPattern, 'unable to find sixPattern that is not ', ninePattern, ' containing ', fivePattern, ' in sixes: ', ...sixes);
+  result[sixPattern] = 6; digitPatterns[6] = sixPattern;
+  
+  // out of the sixes, the 0 is neither 6 nor 9
+  let zeroPattern = sixes.find(p => p !== sixPattern && p !== ninePattern);
+  console.assert(zeroPattern, 'unable to find zeroPattern that is neither: ', sixPattern, ' nor ', ninePattern, ' in sixes: ', ...sixes);
+  result[zeroPattern] = 0; digitPatterns[0] = zeroPattern;
+  
+  return result;
+}
+
+const tinyPatternAllDigits = getPatternAllDigits(parseEntry(tinyInput)[0]);
+for (const [k,v] of Object.entries({
+  acedgfb: 8,
+  cdfbe: 5,
+  gcdfa: 2,
+  fbcad: 3,
+  dab: 7,
+  cefabd: 9,
+  cdfgeb: 6,
+  eafb: 4,
+  cagedb: 0,
+  ab: 1,
+})) {
+  console.assert(tinyPatternAllDigits[normalize(k)] === v, 'unexpected digit for ', k, ' expected: ', v, ' actual: ', tinyPatternAllDigits[normalize(k)]);
+}
+/*
+Then, the four digits of the output value can be decoded:
+
+cdfeb: 5
+fcadb: 3
+cdfeb: 5
+cdbaf: 3
+Therefore, the output value for this entry is 5353.
+*/
+function decode(outputPatterns, patternDigits) {
+  let result = 0;
+  for (const pattern of outputPatterns) {
+    let digit = patternDigits[normalize(pattern)];
+    console.assert(digit !== undefined, 'unable to decode ', pattern);
+    result = result * 10 + digit;
+  }
+  return result;
+}
+const tinyOutputDecoded = decode(parseEntry(tinyInput)[1], tinyPatternAllDigits);
+console.assert(tinyOutputDecoded === 5353, 'incorrect decode. expected: 5353, actual: ', tinyOutputDecoded);
+/*
+Following this same process for each entry in the second, larger example above, the output value of each entry can be determined:
+
+fdgacbe cefdb cefbgd gcbe: 8394
+fcgedb cgb dgebacf gc: 9781
+cg cg fdcagb cbg: 1197
+efabcd cedba gadfec cb: 9361
+gecf egdcabf bgf bfgea: 4873
+gebdcfa ecba ca fadegcb: 8418
+cefg dcbef fcge gbcadfe: 4548
+ed bcgafe cdgba cbgef: 1625
+gbdfcae bgc cg cgb: 8717
+fgae cfgab fg bagce: 4315
+Adding all of the output values in this larger example produces 61229.
+
+For each entry, determine all of the wire/segment connections and decode the four-digit output values. What do you get if you add up all of the output values?
+*/
+function decodeEntry(line) {
+  let [input, output] = parseEntry(line);
+  return decode(output, getPatternAllDigits(input));
+}
+function sumOutputs(lines) {
+  return lines.reduceRight((sum, line) => sum + decodeEntry(line), 0);
+}
+const testSum = sumOutputs(testInput);
+console.assert(testSum === 61229, 'incorrect sum. expected: 61229, actual: ', testSum);
+console.log(sumOutputs(dayInput));
