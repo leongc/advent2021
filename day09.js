@@ -159,3 +159,88 @@ const dayInput = [
 '9999998931234589997523567894324578999843756789234579997876899987654574597894212998989653345989987890',
   ];
 console.log(sumRisk(parseGrid(dayInput)));
+
+/*
+--- Part Two ---
+Next, you need to find the largest basins so you know what areas are most important to avoid.
+
+A basin is all locations that eventually flow downward to a single low point. Therefore, every low point has a basin, although some basins are very small. Locations of height 9 do not count as being in any basin, and all other locations will always be part of exactly one basin.
+
+The size of a basin is the number of locations within the basin, including the low point. The example above has four basins.
+
+The top-left basin, size 3:
+
+2199943210
+3987894921
+9856789892
+8767896789
+9899965678
+The top-right basin, size 9:
+
+2199943210
+3987894921
+9856789892
+8767896789
+9899965678
+The middle basin, size 14:
+
+2199943210
+3987894921
+9856789892
+8767896789
+9899965678
+The bottom-right basin, size 9:
+
+2199943210
+3987894921
+9856789892
+8767896789
+9899965678
+Find the three largest basins and multiply their sizes together. In the above example, this is 9 * 14 * 9 = 1134.
+
+What do you get if you multiply together the sizes of the three largest basins?
+*/
+// destructively mark up the grid
+function getBasinSize(grid, i, j) {
+  let size = 0;
+  let q = [[i,j]];
+  let current;
+  while (current = q.pop()) {
+    let [x, y] = current;
+    if (grid[y][x] === 9) { 
+      continue;
+    }
+    size++;
+    grid[y][x] = 9; // mark as counted
+    if (y > 0 && grid[y-1][x] < 9) { q.push([x,y-1]); } // north
+    if (x > 0 && grid[y][x-1] < 9) { q.push([x-1,y]); } // west
+    if (x < grid[0].length-1 && grid[y][x+1] < 9) { q.push([x+1,y]); } // east
+    if (y < grid.length-1 && grid[y+1][x] < 9) { q.push([x,y+1]); } // south
+  }
+  return size;
+}
+console.assert(getBasinSize(parseGrid(testInput), 1, 0) === 3, 'miscounted top left');
+console.assert(getBasinSize(parseGrid(testInput), 9, 0) === 9, 'miscounted top right');
+console.assert(getBasinSize(parseGrid(testInput), 2, 2) === 14, 'miscounted middle');
+console.assert(getBasinSize(parseGrid(testInput), 6, 4) === 9, 'miscounted bottom right');
+
+function getBasins(grid) {
+  let result = [];
+  for (let j = 0; j < grid.length; j++) {
+    for (let i = 0; i < grid[0].length; i++) {
+      if (isLow(grid, i, j)) {
+        result.push([i,j]);
+      }
+    }
+  }
+  return result;
+}
+function getTop3BasinProduct(grid) {
+  return getBasins(grid)
+    .map(xy => getBasinSize(grid, ...xy))
+    .sort((a,b) => b-a) // descending 
+    .slice(0, 3) // largest three
+    .reduce((a,c)=>a*c); // product
+}
+console.assert(getTop3BasinProduct(parseGrid(testInput)) === 1134, 'unexpected product, expected: 1134, actual: ', getTop3BasinProduct(parseGrid(testInput)));
+console.log(getTop3BasinProduct(parseGrid(dayInput)));
