@@ -1152,3 +1152,32 @@ const dayInput = [
 'fold along y=6',
   ];
 console.log(parseManual(dayInput, true).size);
+
+/*
+--- Part Two ---
+Finish folding the transparent paper according to the instructions. The manual says the code is always eight capital letters.
+
+What code do you use to activate the infrared thermal imaging camera system?
+*/
+function printManual(manualMap) {
+  let maxX = 0, maxY = 0;
+  for (const dot of manualMap.values()) {
+    if (dot.x > maxX) { maxX = dot.x; }
+    if (dot.y > maxY) { maxY = dot.y; }
+  }
+  let grid = new Array(maxY+1);
+  for (j = 0; j < grid.length; j++) {
+    grid[j] = new Array(maxX+1).fill('.');
+  }
+  for (const dot of manualMap.values()) {
+    grid[dot.y][dot.x] = '#';
+  }
+  return grid.map(r => r.join('')).join('\n');
+}
+console.assert(printManual(parseManual(testInput)) === 
+               ['#####',
+                '#...#',
+                '#...#',
+                '#...#',
+                '#####'].join('\n'));
+console.log(printManual(parseManual(dayInput)));
