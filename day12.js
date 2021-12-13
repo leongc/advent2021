@@ -238,3 +238,100 @@ const dayInput = [
 'br-TF',
 ];
 console.log(countPaths(dayInput));
+
+/*
+--- Part Two ---
+After reviewing the available paths, you realize you might have time to visit a single small cave twice. Specifically, big caves can be visited any number of times, a single small cave can be visited at most twice, and the remaining small caves can be visited at most once. However, the caves named start and end can only be visited exactly once each: once you leave the start cave, you may not return to it, and once you reach the end cave, the path must end immediately.
+
+Now, the 36 possible paths through the first example above are:
+
+start,A,b,A,b,A,c,A,end
+start,A,b,A,b,A,end
+start,A,b,A,b,end
+start,A,b,A,c,A,b,A,end
+start,A,b,A,c,A,b,end
+start,A,b,A,c,A,c,A,end
+start,A,b,A,c,A,end
+start,A,b,A,end
+start,A,b,d,b,A,c,A,end
+start,A,b,d,b,A,end
+start,A,b,d,b,end
+start,A,b,end
+start,A,c,A,b,A,b,A,end
+start,A,c,A,b,A,b,end
+start,A,c,A,b,A,c,A,end
+start,A,c,A,b,A,end
+start,A,c,A,b,d,b,A,end
+start,A,c,A,b,d,b,end
+start,A,c,A,b,end
+start,A,c,A,c,A,b,A,end
+start,A,c,A,c,A,b,end
+start,A,c,A,c,A,end
+start,A,c,A,end
+start,A,end
+start,b,A,b,A,c,A,end
+start,b,A,b,A,end
+start,b,A,b,end
+start,b,A,c,A,b,A,end
+start,b,A,c,A,b,end
+start,b,A,c,A,c,A,end
+start,b,A,c,A,end
+start,b,A,end
+start,b,d,b,A,c,A,end
+start,b,d,b,A,end
+start,b,d,b,end
+start,b,end
+The slightly larger example above now has 103 paths through it, and the even larger example now has 3509 paths through it.
+
+Given these new rules, how many paths through this cave system are there?
+*/
+
+/**
+ * context is { 
+ *   current: current cave,
+ *   path: [visited caves in order, current cave is last],
+ *   hasVisitedSmallCaveTwice: true iff a small cave has been visited twice,
+ *   smallCavesVisited: Set of small caves visited
+ * }
+ */
+function getNextContext2(context = { path: [], hasVisitedSmallCaveTwice: false, smallCavesVisited: new Set() }, 
+                        nextCave = 'start') {
+  let hasVisitedSmallCaveTwice = context.hasVisitedSmallCaveTwice;
+  let smallCavesVisited = context.smallCavesVisited;
+  if (isSmallCave(nextCave)) {
+    if (!hasVisitedSmallCaveTwice && smallCavesVisited.has(nextCave)) {
+      hasVisitedSmallCaveTwice = true;
+    }
+    smallCavesVisited = new Set(context.smallCavesVisited);
+    smallCavesVisited.add(nextCave);
+  }
+  return { 
+    current: nextCave, 
+    path: context.path.concat([nextCave]), 
+    hasVisitedSmallCaveTwice,
+    smallCavesVisited,
+    filterNextCaves: function(nextCaves) {
+      return Array.from(nextCaves).filter(
+        c => !(hasVisitedSmallCaveTwice && isSmallCave(c) && smallCavesVisited.has(c)));                                          
+    }
+  };
+}
+function countPaths2(lines) {
+  let count = 0;
+  let caveMap = parseCaves(lines);
+  let contextStack = [getNextContext2()];
+  let context;
+  while (context = contextStack.pop()) {
+    let connectedCaves = caveMap.get(context.current);
+    context.filterNextCaves(connectedCaves).forEach(
+      nc => {
+        if (nc === 'end') { count++; return; }
+        contextStack.push(getNextContext2(context, nc));
+      });
+  }
+  return count;
+}
+console.assert(countPaths2(tinyInput) === 36, 'failed tinyInput2. Expected: 36, actual: ', countPaths2(tinyInput));
+console.assert(countPaths2(mediumInput) === 103, 'failed mediumInput2. Expected: 103, actual: ', countPaths2(mediumInput));
+console.assert(countPaths2(testInput) === 3509, 'failed testInput2. Expected: 3509, actual: ', countPaths2(testInput));
+console.log(countPaths2(dayInput));
