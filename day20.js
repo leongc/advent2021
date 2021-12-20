@@ -171,7 +171,7 @@ function enhance(grid, algo, times = 1, fillValue = '.') {
     }
     result.push(row);
   }
-  let nextFillValue = fillValue === '.' ? algo[0] : algo[255];
+  let nextFillValue = fillValue === '.' ? algo[0] : algo[511];
   return enhance(result, algo, times-1, nextFillValue);
 }
 // console.log(printGrid(enhance(testGrid, testInput[0])));
@@ -283,3 +283,13 @@ const dayInput = [
 '.#...##.....#.#...#...#.##.##..##.#.##.###.###.##.#..##.#.#.#.#..#.#.....####..#.....###.#.#########',  
   ];
 console.log(countLitGrid(enhance(parseGrid(dayInput.slice(2)), dayInput[0], 2)));
+/*
+--- Part Two ---
+You still can't quite make out the details in the image. Maybe you just didn't enhance it enough.
+
+If you enhance the starting input image in the above example a total of 50 times, 3351 pixels are lit in the final output image.
+
+Start again with the original input image and apply the image enhancement algorithm 50 times. How many pixels are lit in the resulting image?
+*/
+console.assert(countLitGrid(enhance(testGrid, testInput[0], 50)) === 3351);
+console.log(countLitGrid(enhance(parseGrid(dayInput.slice(2)), dayInput[0], 50)));
