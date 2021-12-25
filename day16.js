@@ -55,7 +55,7 @@ So, this packet represents a literal value with binary representation 0111111001
 function readBits(bits, n) {
   let result = 0;
   for (let i = n; i-->0; ) {
-    result <<= 1;
+    result *= 2;
     if (bits.next().value) {
       result++;
     }
@@ -69,7 +69,7 @@ function readLiteral(bits) {
   let more;
   do {
     more = bits.next().value;
-    result <<= 4;
+    result *= 16;
     result += readBits(bits, 4);
     bitsRead += 5;
   } while (more);
@@ -196,3 +196,92 @@ Decode the structure of your hexadecimal-encoded BITS transmission; what do you 
 */
 const dayInput = '620D7800996600E43184312CC01A88913E1E180310FA324649CD5B9DA6BFD107003A4FDE9C718593003A5978C00A7003C400A70025400D60259D400B3002880792201B89400E601694804F1201119400C600C144008100340013440021279A5801AE93CA84C10CF3D100875401374F67F6119CA46769D8664E76FC9E4C01597748704011E4D54D7C0179B0A96431003A48ECC015C0068670FA7EF1BC5166CE440239EFC226F228129E8C1D6633596716E7D4840129C4C8CA8017FCFB943699B794210CAC23A612012EB40151006E2D4678A4200EC548CF12E4FDE9BD4A5227C600F80021D08219C1A00043A27C558AA200F4788C91A1002C893AB24F722C129BDF5121FA8011335868F1802AE82537709999796A7176254A72F8E9B9005BD600A4FD372109FA6E42D1725EDDFB64FFBD5B8D1802323DC7E0D1600B4BCDF6649252B0974AE48D4C0159392DE0034B356D626A130E44015BD80213183A93F609A7628537EB87980292A0D800F94B66546896CCA8D440109F80233ABB3ABF3CB84026B5802C00084C168291080010C87B16227CB6E454401946802735CA144BA74CFF71ADDC080282C00546722A1391549318201233003361006A1E419866200DC758330525A0C86009CC6E7F2BA00A4E7EF7AD6E873F7BD6B741300578021B94309ABE374CF7AE7327220154C3C4BD395C7E3EB756A72AC10665C08C010D0046458E72C9B372EAB280372DFE1BCA3ECC1690046513E5D5E79C235498B9002BD132451A5C78401B99AFDFE7C9A770D8A0094EDAC65031C0178AB3D8EEF8E729F2C200D26579BEDF277400A9C8FE43D3030E010C6C9A078853A431C0C0169A5CB00400010F8C9052098002191022143D30047C011100763DC71824200D4368391CA651CC0219C51974892338D0';
 console.log(readPacket(bitIterator(dayInput)).versionSum);
+
+/*
+--- Part Two ---
+Now that you have the structure of your transmission decoded, you can calculate the value of the expression it represents.
+
+Literal values (type ID 4) represent a single number as described above. The remaining type IDs are more interesting:
+
+Packets with type ID 0 are sum packets - their value is the sum of the values of their sub-packets. If they only have a single sub-packet, their value is the value of the sub-packet.
+Packets with type ID 1 are product packets - their value is the result of multiplying together the values of their sub-packets. If they only have a single sub-packet, their value is the value of the sub-packet.
+Packets with type ID 2 are minimum packets - their value is the minimum of the values of their sub-packets.
+Packets with type ID 3 are maximum packets - their value is the maximum of the values of their sub-packets.
+Packets with type ID 5 are greater than packets - their value is 1 if the value of the first sub-packet is greater than the value of the second sub-packet; otherwise, their value is 0. These packets always have exactly two sub-packets.
+Packets with type ID 6 are less than packets - their value is 1 if the value of the first sub-packet is less than the value of the second sub-packet; otherwise, their value is 0. These packets always have exactly two sub-packets.
+Packets with type ID 7 are equal to packets - their value is 1 if the value of the first sub-packet is equal to the value of the second sub-packet; otherwise, their value is 0. These packets always have exactly two sub-packets.
+Using these rules, you can now work out the value of the outermost packet in your BITS transmission.
+*/
+
+// @return object with value, bitsRead
+function readPacket2(bits) {
+  let bitsRead = 0;
+  let version = readBits(bits, 3);
+  bitsRead += 3;
+  let type = readBits(bits, 3);
+  bitsRead += 3;
+  let value;
+  if (type === 4) { // literal packet
+    let [literal, literalBits] = readLiteral(bits);
+    bitsRead += literalBits;
+    value = literal;
+  } else { // operator packet
+    let subPacketQuantityType = bits.next().value;
+    bitsRead++;
+    let subPackets = [];
+    if (subPacketQuantityType) {
+      let subPacketCount = readBits(bits, 11);
+      bitsRead += 11;
+      for (;subPacketCount-->0;) {
+        let subPacket = readPacket2(bits);
+        bitsRead += subPacket.bitsRead;
+        subPackets.push(subPacket);
+      }
+    } else { // subPacketBitsType
+      let subPacketBits = readBits(bits, 15);
+      bitsRead += 15;
+      while (subPacketBits > 0) {
+        let subPacket = readPacket2(bits);
+        bitsRead += subPacket.bitsRead;
+        subPackets.push(subPacket);
+        subPacketBits -= subPacket.bitsRead;
+      }
+    } // fi subPacketQuantityType
+    let op;
+    switch (type) {
+      case 0: value = subPackets.map(p => p.value).reduce((a,c) => a+c, 0); op = 'sum'; break;
+      case 1: value = subPackets.map(p => p.value).reduce((a,c) => a*c, 1); op = 'prod'; break;
+      case 2: value = Math.min(...Array.from(subPackets.map(p => p.value))); op = 'min'; break;
+      case 3: value = Math.max(...Array.from(subPackets.map(p => p.value))); op = 'max'; break;
+      case 5: value = subPackets[0].value > subPackets[1].value ? 1 : 0; op = 'gt'; break;
+      case 6: value = subPackets[0].value < subPackets[1].value ? 1 : 0; op = 'lt'; break;
+      case 7: value = subPackets[0].value === subPackets[1].value ? 1 : 0; op = 'eq'; break;
+      default: console.error('unexpected packet type: ', type);
+    } // type
+    return { value, bitsRead, op, subPackets };
+  } // fi literal or operator packet  
+  return { value, bitsRead };
+}
+/*
+For example:
+
+C200B40A82 finds the sum of 1 and 2, resulting in the value 3.
+04005AC33890 finds the product of 6 and 9, resulting in the value 54.
+880086C3E88112 finds the minimum of 7, 8, and 9, resulting in the value 7.
+CE00C43D881120 finds the maximum of 7, 8, and 9, resulting in the value 9.
+D8005AC2A8F0 produces 1, because 5 is less than 15.
+F600BC2D8F produces 0, because 5 is not greater than 15.
+9C005AC2F8F0 produces 0, because 5 is not equal to 15.
+9C0141080250320F1802104A08 produces 1, because 1 + 3 = 2 * 2.
+What do you get if you evaluate the expression represented by your hexadecimal-encoded BITS transmission?
+*/
+console.assert(readPacket2(bitIterator('C200B40A82')).value === 3, 'sum failed');
+console.assert(readPacket2(bitIterator('04005AC33890')).value === 54, 'product failed');
+console.assert(readPacket2(bitIterator('880086C3E88112')).value === 7, 'min failed');
+console.assert(readPacket2(bitIterator('CE00C43D881120')).value === 9, 'max failed');
+console.assert(readPacket2(bitIterator('D8005AC2A8F0')).value === 1, 'less failed');
+console.assert(readPacket2(bitIterator('F600BC2D8F')).value === 0, 'greater failed');
+console.assert(readPacket2(bitIterator('9C005AC2F8F0')).value === 0, 'equal failed');
+console.assert(readPacket2(bitIterator('9C0141080250320F1802104A08')).value === 1, 'sum eq prod failed');
+
+console.log(readPacket2(bitIterator(dayInput)).value);
