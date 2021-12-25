@@ -189,3 +189,56 @@ const dayInput = [
 '5496179226499867986599862998778132568199955188683452991319684698887391958959379992599899599281999798',
   ];
 console.log(minPath(parseGrid(dayInput)));
+
+/*
+--- Part Two ---
+Now that you know how to find low-risk paths in the cave, you can try to find your way out.
+
+The entire cave is actually five times larger in both dimensions than you thought; the area you originally scanned is just one tile in a 5x5 tile area that forms the full map. Your original map tile repeats to the right and downward; each time the tile repeats to the right or downward, all of its risk levels are 1 higher than the tile immediately up or left of it. However, risk levels above 9 wrap back around to 1. So, if your original map had some position with a risk level of 8, then that same position on each of the 25 total tiles would be as follows:
+
+8 9 1 2 3
+9 1 2 3 4
+1 2 3 4 5
+2 3 4 5 6
+3 4 5 6 7
+Each single digit above corresponds to the example position with a value of 8 on the top-left tile. Because the full map is actually five times larger in both dimensions, that position appears a total of 25 times, once in each duplicated tile, with the values shown above.
+*/
+function wrapSum(a, b) {
+  let sum = a + b;
+  return sum > 9 ? sum - 9 : sum;
+}
+function expandGrid(grid) {
+  let result = [];
+  for (let j = 0; j < 5; j++) {
+    for (const row of grid) {
+      let expandedRow = [];
+      for (let i = 0; i < 5; i++) {
+        for (const cell of row) {
+          expandedRow.push(wrapSum(cell, i+j));
+        } // cell
+      } // i
+      result.push(expandedRow);
+    } // row
+  } // j
+  return result;
+}
+console.assert(expandGrid([[8]]).map(r => r.join('')).join() === ['89123','91234','12345','23456','34567'].join(), 'failed expandGrid');
+
+/*
+Here is the full five-times-as-large version of the first example above, with the original map in the top left corner highlighted:
+
+11637517422274862853338597396444961841755517295286
+...
+67554889357866599146897761125791887223681299833479
+
+Equipped with the full map, you can now find a path from the top left corner to the bottom right corner with the lowest total risk:
+...
+The total risk of this path is 315 (the starting position is still never entered, so its risk is not counted).
+*/
+console.assert(minPath(expandGrid(parseGrid(testInput))), 'failed expanded testInput');
+
+/*
+Using the full map, what is the lowest total risk of any path from the top left to the bottom right?
+*/
+console.log(minPath(expandGrid(parseGrid(dayInput))));
+
