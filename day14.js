@@ -241,3 +241,109 @@ const dayInput = [
 'KB -> V',
   ];
 console.log(getMinMaxDifference(getHistogram(run(dayInput[0], makeAutomata(dayInput.slice(2)), 10))));
+
+/*
+The resulting polymer isn't nearly strong enough to reinforce the submarine. You'll need to run more steps of the pair insertion process; a total of 40 steps should do it.
+
+In the above example, the most common element is B (occurring 2192039569602 times) and the least common element is H (occurring 3849876073 times); subtracting these produces 2188189693529.
+
+Apply 40 steps of pair insertion to the polymer template and find the most and least common elements in the result. What do you get if you take the quantity of the most common element and subtract the quantity of the least common element?
+*/
+function parseExpansionMap(pairInsertionRules) {
+  let result = new Map();
+  for (const rule of pairInsertionRules) {
+    let [elementPair, insertedElement] = rule.split(' -> ', 2);
+    result.set(elementPair, insertedElement);
+  }
+  return result;
+}
+
+function expandHistogram(template, expansionMap, maxSteps = 10) {
+  let result = new Map();
+  function increment(c) {
+    result.set(c, result.has(c) ? result.get(c)+1 : 1);
+  }
+  
+  let rightStack = []; // array of [char, step]
+  function push(expansion, step) {
+    increment(expansion);
+    rightStack.push([expansion, step]);    
+  }  
+  // initialize stack with template in reverse order
+  template.split('').reverse().forEach(c => push(c, 0));
+  
+  let left, step;
+  // pop right stack and use the values to reset left and step
+  // @return false when rightStack is empty, otherwise true
+  function pop() {
+    if (rightStack.length < 1) {
+      return false;
+    }
+    [left, step] = rightStack.pop();
+    return true;
+  }
+  // initialize
+  pop();
+  
+  // @return topmost char from rightStack, or undefined when rightStack is empty
+  function peekRight() {
+    return rightStack.length > 0 ? rightStack[rightStack.length-1][0] : undefined;
+  }
+  
+  // @return true iff expansion reached maxSteps, otherwise false
+  function expandHeadMax() {
+    let right = peekRight();
+    while (step < maxSteps) {
+      let pair = left + right;
+      if (!expansionMap.has(pair)) {
+        return false;
+      }
+      right = expansionMap.get(pair);
+      push(right, ++step);
+    }
+    return step === maxSteps;
+  }
+  
+  while (rightStack.length > 0) {
+    // pop twice when max reached, otherwise pop once
+    if (expandHeadMax()) {
+      pop();
+    }
+    pop();
+  }
+  
+  return result;
+}
+
+function printHistogram(h) {
+  return Array.from(h.keys()).sort().map(k=>[k,h.get(k)].join('=>')).join('\n');
+}
+const testTemplate = testInput[0];
+const testExpansionMap = parseExpansionMap(testInput.slice(2));
+console.assert(printHistogram(expandHistogram(testTemplate, testExpansionMap, 1)) === printHistogram(getHistogram(testStep1)), 'failed step 1');
+console.assert(printHistogram(expandHistogram(testTemplate, testExpansionMap, 2)) === printHistogram(getHistogram(testStep2)), 'failed step 2');
+console.assert(printHistogram(expandHistogram(testTemplate, testExpansionMap, 3)) === printHistogram(getHistogram(testStep3)), 'failed step 3');
+console.assert(printHistogram(expandHistogram(testTemplate, testExpansionMap, 4)) === printHistogram(getHistogram(testStep4)), 'failed step 4');
+
+const testStep10Histogram = new Map();
+[['B',1749], ['C',298], ['H',161], ['N',865]].forEach(([k,v]) => testStep10Histogram.set(k,v));
+console.assert(printHistogram(expandHistogram(testTemplate, testExpansionMap, 10)) === printHistogram(testStep10Histogram), 'failed step 10');
+console.assert(getMinMaxDifference(expandHistogram(dayInput[0], parseExpansionMap(dayInput.slice(2)), 10)) === 2988, 'failed min/max for dayInput'); 
+
+// still too slow; let's try memoization
+function merge(leftHistogram, rightHistogram) {
+  if (leftHistogram.size === 0) {
+    return rightHistogram;
+  }
+  rightHistogram.forEach((v, k) => {
+      leftHistogram.set(k, leftHistogram.has(k) ? leftHistogram.get(k) + v : v);
+  });
+  return leftHistogram; 
+}
+
+// console.assert(getMinMaxDifference(expandHistogram(testTemplate, testExpansionMap, 40)) === 2188189693529, 'failed step 40');
+
+
+
+
+// console.log(getMinMaxDifference(expandHistogram(dayInput[0], parseExpansionMap(dayInput.slice(2)), 40)));
