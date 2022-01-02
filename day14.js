@@ -340,10 +340,45 @@ function merge(leftHistogram, rightHistogram) {
   });
   return leftHistogram; 
 }
+console.assert(printHistogram(merge(getHistogram('ABCDE'), getHistogram('ACEF'))) === printHistogram(getHistogram('ABCDEACEF')), 'merge failed');
 
-// console.assert(getMinMaxDifference(expandHistogram(testTemplate, testExpansionMap, 40)) === 2188189693529, 'failed step 40');
+// @return histogram based on expanding <left, right, stepsRemaining> using cache if the value is already computed, 
+// otherwise recursively using expansionMap rules and storing intermediate results in the cache along the way.
+function getExpansion(left, right, stepsRemaining, expansionMap, cache) {
+  const key = left + right + stepsRemaining;
+  if (cache.has(key)) {
+    return cache.get(key);
+  }
+  let histogram = new Map();
+  if (!expansionMap.has(left+right)) {
+    return histogram;
+  }
+  const middle = expansionMap.get(left+right);
+  histogram.set(middle, 1);
+  if (stepsRemaining > 1) {
+    histogram = merge(histogram, getExpansion(left, middle, stepsRemaining-1, expansionMap, cache));
+    histogram = merge(histogram, getExpansion(middle, right, stepsRemaining-1, expansionMap, cache));
+  }
+  cache.set(key, histogram);
+  return histogram;
+}
+const testCache = new Map();
+console.assert(printHistogram(getExpansion('N', 'N', 1, testExpansionMap, testCache)) === printHistogram(getHistogram('C')), 'getExpansion failed NN1');
+console.assert(printHistogram(getExpansion('N', 'N', 2, testExpansionMap, testCache)) === printHistogram(getHistogram('BCC')), 'getExpansion failed NN2');
 
+// @return histogram of expanding template by quantity of steps using expansionMap rules
+function expandWithCache(template, steps, expansionMap) {
+  const cache = new Map();
+  let histogram = getHistogram(template);
+  for (let i = 0; i < template.length - 1; i++) {
+    histogram = merge(histogram, getExpansion(template[i], template[i+1], steps, expansionMap, cache));
+  }
+  return histogram;
+}
+console.assert(printHistogram(expandWithCache(testInput[0], 1, testExpansionMap)) === printHistogram(getHistogram('NCNBCHB')), 'expandWithCache failed test1');
+console.assert(printHistogram(expandWithCache(testInput[0], 2, testExpansionMap)) === printHistogram(getHistogram('NBCCNBBBCBHCB')), 'expandWithCache failed test2');
+console.assert(printHistogram(expandWithCache(testInput[0], 3, testExpansionMap)) === printHistogram(getHistogram('NBBBCNCCNBBNBNBBCHBHHBCHB')), 'expandWithCache failed test3');
+console.assert(printHistogram(expandWithCache(testInput[0], 4, testExpansionMap)) === printHistogram(getHistogram('NBBNBNBBCCNBCNCCNBBNBBNBBBNBBNBBCBHCBHHNHCBBCBHCB')), 'expandWithCache failed test4');
+console.assert(getMinMaxDifference(expandWithCache(testInput[0], 40, testExpansionMap)) === 2188189693529, 'failed diff test40');
 
-
-
-// console.log(getMinMaxDifference(expandHistogram(dayInput[0], parseExpansionMap(dayInput.slice(2)), 40)));
+console.log(getMinMaxDifference(expandWithCache(dayInput[0], 40, parseExpansionMap(dayInput.slice(2)))));
