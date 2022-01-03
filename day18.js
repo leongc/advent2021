@@ -161,6 +161,7 @@ For example, the final sum of this list is [[[[1,1],[2,2]],[3,3]],[4,4]]:
 function sumLines(lines) {
   let n = reduce(parseNumber(lines[0]));
   for (let i = 1; i < lines.length; i++) {
+    // hack, there's a bug in explode not setting parent pairs, so print and parse the number to rebuild 
     n = reduce(parseNumber([JSON.parse(printNumber(n)), lines[i]]));
   }
   return n;
@@ -292,7 +293,7 @@ Add up all of the snailfish numbers from the homework assignment in the order th
 */
 console.assert(magnitude(parseNumber([[[[6,6],[7,6]],[[7,7],[7,0]]],[[[7,7],[7,7]],[[7,8],[9,9]]]])) === 4140, 'failed magnitude test');
 
-console.log(magnitude(sumLines([
+const dayInput = [
 [[[[2,5],4],[[1,0],[8,3]]],[[2,[2,4]],[1,[3,3]]]],
 [[[2,2],[[4,3],3]],[[[8,6],3],[3,7]]],
 [[[9,[4,1]],[9,0]],[6,[6,0]]],
@@ -393,4 +394,44 @@ console.log(magnitude(sumLines([
 [[7,[[5,6],[2,7]]],[[[7,3],0],[1,[0,6]]]],
 [[2,[[5,5],2]],[[3,[7,2]],[[7,1],8]]],
 [[[[2,4],[6,8]],[0,[7,5]]],[[3,[2,5]],[7,7]]],  
-  ])));
+  ];
+console.log(magnitude(sumLines(dayInput)));
+
+/*
+--- Part Two ---
+You notice a second question on the back of the homework assignment:
+
+What is the largest magnitude you can get from adding only two of the snailfish numbers?
+
+Note that snailfish addition is not commutative - that is, x + y and y + x can produce different results.
+
+Again considering the last example homework assignment above:
+
+[[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]]
+[[[5,[2,8]],4],[5,[[9,9],0]]]
+[6,[[[6,2],[5,6]],[[7,6],[4,7]]]]
+[[[6,[0,7]],[0,9]],[4,[9,[9,0]]]]
+[[[7,[6,4]],[3,[1,3]]],[[[5,5],1],9]]
+[[6,[[7,3],[3,2]]],[[[3,8],[5,7]],4]]
+[[[[5,4],[7,7]],8],[[8,3],8]]
+[[9,3],[[9,9],[6,[4,9]]]]
+[[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]]
+[[[[5,2],5],[8,[3,7]]],[[5,[7,5]],[4,4]]]
+The largest magnitude of the sum of any two snailfish numbers in this list is 3993. This is the magnitude of [[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]] + [[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]], which reduces to [[[[7,8],[6,6]],[[6,0],[7,7]]],[[[7,8],[8,8]],[[7,9],[0,6]]]].
+
+What is the largest magnitude of any sum of two different snailfish numbers from the homework assignment?
+*/
+function maxPair(numbers) {
+  let max = -Infinity;
+  for (let i = 0; i < numbers.length; i++) {
+    for (let j = 0; j < numbers.length; j++) {
+      if (i === j) { continue; }
+      let mag = magnitude(add(parseNumber(numbers[i]), parseNumber(numbers[j])));
+      if (mag > max) { 
+        max = mag; 
+      }
+    } // j
+  } // i
+  return max;
+}
+console.log(maxPair(dayInput));
